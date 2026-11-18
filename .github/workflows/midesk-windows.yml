@@ -202,7 +202,7 @@ jobs:
           name: MiDESK ${{ steps.ver.outputs.tag }}
           prerelease: false
           body: |
-            Baixe só o **MiDESK-Setup.exe** (~110 KB): ele busca a versão mais recente desta página, confere o SHA256 e instala.
+            Baixe só o **MiDESK-Setup.exe** (~150 KB): ele busca a versão mais recente desta página, confere o SHA256, instala e ativa a atualização automática.
           files: |
             ./dist/*.exe
             ./dist/SHA256SUMS.txt

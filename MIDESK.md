@@ -6,16 +6,32 @@ servidor próprio embutido e um instalador online pequeno.
 ## Como funciona
 
 ```
-MiDESK-Setup.exe (~140 KB)
+MiDESK-Setup.exe (~150 KB)
    └─ consulta  api.github.com/repos/Systecinfo/MiDESK/releases/latest
    └─ baixa     MiDESK-<versão>-x86_64.exe   (~25 MB, da Release)
    └─ confere   SHA256SUMS.txt
    └─ instala   --silent-install  ->  C:\Program Files\MiDESK\MiDESK.exe
+   └─ ativa     atualização automática  ->  C:\Program Files\MiDESK Updater\ + tarefa "MiDESK Update"
 ```
 
 O programa completo é compilado pelo GitHub Actions (`.github/workflows/midesk-windows.yml`) e publicado
-nas Releases deste repositório. O instalador pequeno sempre pega a Release mais recente, então
-atualizar o MiDESK é só gerar uma nova Release.
+nas Releases deste repositório. Atualizar o MiDESK é só gerar uma nova Release.
+
+## Atualização automática
+
+O Setup copia a si mesmo para `C:\Program Files\MiDESK Updater\MiDESK-Updater.exe` e cria a tarefa
+agendada **MiDESK Update** (roda como SYSTEM 5 minutos depois de ligar o PC e todo dia por volta das 03:00).
+Ela compara a tag da Release mais recente com `installed-tag.txt`; se mudou, baixa o pacote, confere o
+SHA256 e roda `--update` (o atualizador interno do RustDesk: troca os arquivos, reinicia o serviço e
+reabre a bandeja, mantendo ID e senha). O atualizador também se atualiza com o `MiDESK-Setup.exe` da Release.
+
+- Se alguém estiver acessando o PC naquele momento, a atualização fica para a próxima verificação.
+  Uma sessão em que o próprio PC controla outro (saída) não é detectada e é fechada.
+- Histórico em `C:\Program Files\MiDESK Updater\updater.log`.
+- Forçar agora: `schtasks /Run /TN "MiDESK Update"` (como administrador).
+- Desligar num PC: `schtasks /Change /TN "MiDESK Update" /Disable`.
+- Ao desinstalar o MiDESK, a próxima execução remove a tarefa e a pasta do atualizador.
+- PCs instalados com um Setup antigo (antes desta função) precisam rodar o MiDESK-Setup uma vez.
 
 ## Arquivos do MiDESK neste repositório
 

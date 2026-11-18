@@ -27,7 +27,7 @@ $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 if (-not (Test-Path $csc)) { $csc = "$env:WINDIR\Microsoft.NET\Framework\v4.0.30319\csc.exe" }
 
 $cscArgs = @('/nologo', '/target:winexe', '/optimize+', "/out:$out\$AppName-Setup.exe",
-    '/r:System.Windows.Forms.dll', '/r:System.Drawing.dll', '/r:System.Web.Extensions.dll')
+    '/r:System.Windows.Forms.dll', '/r:System.Drawing.dll', '/r:System.Web.Extensions.dll', '/r:System.Management.dll')
 if ($Icon -and (Test-Path $Icon)) { $cscArgs += "/win32icon:$Icon" }
 $cscArgs += @((Join-Path $here 'MiDeskSetup.cs'), $cfgFile)
 
