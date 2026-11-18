@@ -106,5 +106,13 @@ patch("flutter/lib/desktop/pages/install_page.dart", [
     (r"'https://rustdesk\.com/privacy\.html'", f"'{REPO_URL}'"),
 ])
 
+# Quando a conexão direta (P2P) abre e cai, o RustDesk pergunta se quer usar o relay.
+# O MiDESK reconecta pelo relay sozinho (esse aviso só vem de conexão direta, então não entra em loop).
+patch("flutter/lib/models/model.dart", [
+    (r"(\} else if \(type == 'relay-hint' \|\| type == 'relay-hint2'\) \{\s*)"
+     r"showRelayHintDialog\(sessionId, type, title, text, dialogManager, peerId\);",
+     r"\g<1>reconnect(dialogManager, sessionId, true);"),
+])
+
 print(f"[brand] app={APP} servidor={'próprio: ' + SERVER if SERVER else 'público (padrão)'} "
       f"chave={'própria' if KEY else 'padrão'}")
