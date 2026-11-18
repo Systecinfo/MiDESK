@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: write
+  actions: read # o SignPath lê o artefato do build
 
 env:
   SCITER_RUST_VERSION: "1.75"
@@ -182,6 +183,38 @@ jobs:
           .\installer\build.ps1 -Repo "${{ github.repository }}" -AppName "${{ env.APP_NAME }}" -Icon res\icon.ico
           Copy-Item .\installer\dist\MiDESK-Setup.exe .\dist\
 
+      # Assinatura do MiDESK-Setup.exe pelo SignPath (só roda depois de configurar as variáveis
+      # SIGNPATH_ORGANIZATION_ID / SIGNPATH_PROJECT_SLUG / SIGNPATH_POLICY_SLUG e o secret
+      # SIGNPATH_API_TOKEN). Cada assinatura precisa ser aprovada manualmente no site do SignPath.
+      - name: Upload unsigned MiDESK-Setup.exe (SignPath)
+        id: upload-unsigned-setup
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: midesk-setup-unsigned
+          path: ./dist/MiDESK-Setup.exe
+
+      - name: Sign MiDESK-Setup.exe (SignPath)
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.upload-unsigned-setup.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 7200
+          output-artifact-directory: ./signed
+
+      - name: Use signed MiDESK-Setup.exe
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        run: |
+          Copy-Item .\signed\MiDESK-Setup.exe .\dist\MiDESK-Setup.exe -Force
+          $sig = Get-AuthenticodeSignature .\dist\MiDESK-Setup.exe
+          if ($sig.Status -ne 'Valid') { throw "Assinatura inválida: $($sig.Status)" }
+          $sig.SignerCertificate.Subject
+
       - name: Checksums
         shell: bash
         run: |
@@ -203,6 +236,8 @@ jobs:
           prerelease: false
           body: |
             Baixe só o **MiDESK-Setup.exe** (~150 KB): ele busca a versão mais recente desta página, confere o SHA256, instala e ativa a atualização automática.
+
+            [Code signing policy](https://github.com/${{ github.repository }}/blob/master/CODE_SIGNING.md) (inclui a política de privacidade).
           files: |
             ./dist/*.exe
             ./dist/SHA256SUMS.txt

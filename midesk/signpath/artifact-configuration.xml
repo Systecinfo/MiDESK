@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Configuração de artefato para o projeto MiDESK no SignPath.
+     O GitHub Actions envia um ZIP com o MiDESK-Setup.exe na raiz; o SignPath assina o exe
+     e confere os metadados exigidos pela SignPath Foundation (nome e versão do produto). -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="MiDESK-Setup.exe" product-name="MiDESK" product-version="1.1.0.0">
+      <authenticode-sign/>
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

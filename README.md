@@ -1,3 +1,14 @@
+# MiDESK
+
+Remote desktop based on RustDesk, with its own server and a small online installer.
+**Download:** [`MiDESK-Setup.exe`](../../releases/latest) ·
+**[Code signing policy](CODE_SIGNING.md)** (includes the privacy policy) ·
+[Documentação (pt-BR)](MIDESK.md)
+
+The original RustDesk README follows.
+
+---
+
 <p align="center">
   <img src="res/logo-header.svg" alt="RustDesk - Your remote desktop"><br>
   <a href="#raw-steps-to-build">Build</a> •

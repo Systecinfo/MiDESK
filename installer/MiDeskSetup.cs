@@ -36,7 +36,8 @@ namespace MiDesk
         static int Main(string[] args)
         {
             if (args.Length >= 1 && args[0] == "--update") return Updater.RunUpdate();
-            if (args.Length >= 3 && args[0] == "--finish") return Updater.RunFinish(args[1], args[2]);
+            if (args.Length >= 3 && args[0] == "--finish")
+                return Updater.RunFinish(args[1], args[2], Array.IndexOf(args, "--no-autoupdate") < 0);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new SetupForm());
@@ -232,7 +233,7 @@ namespace MiDesk
         }
 
         // Parte elevada da instalação feita pela janela do Setup.
-        public static int RunFinish(string file, string tag)
+        public static int RunFinish(string file, string tag, bool autoUpdate)
         {
             try
             {
@@ -244,6 +245,15 @@ namespace MiDesk
                 if (!ok) { Log("A instalação não terminou."); return 2; }
 
                 SecureUpdaterDir();
+                if (!autoUpdate)
+                {
+                    // O usuário desmarcou a atualização automática: remove a tarefa de uma instalação anterior.
+                    Schtasks("/Delete /TN \"" + Core.TaskName + "\" /F");
+                    if (File.Exists(Core.UpdaterExe)) File.Delete(Core.UpdaterExe);
+                    File.WriteAllText(Core.TagFile, tag);
+                    Log("Instalado " + tag + " sem atualização automática.");
+                    return 0;
+                }
                 string self = Application.ExecutablePath;
                 if (!string.Equals(Path.GetFullPath(self), Path.GetFullPath(Core.UpdaterExe), StringComparison.OrdinalIgnoreCase))
                     File.Copy(self, Core.UpdaterExe, true);
@@ -331,8 +341,15 @@ namespace MiDesk
         readonly Label status = new Label();
         readonly ProgressBar bar = new ProgressBar();
         readonly Button cancel = new Button();
+        readonly Button install = new Button();
+        readonly Label info = new Label();
+        readonly CheckBox autoUpdate = new CheckBox();
+        readonly LinkLabel policy = new LinkLabel();
         volatile bool cancelled;
+        bool withAutoUpdate = true;
         WebClient client;
+
+        public static string PolicyUrl { get { return "https://github.com/" + BuildConfig.Repo + "/blob/master/CODE_SIGNING.md"; } }
 
         public SetupForm()
         {
@@ -341,27 +358,61 @@ namespace MiDesk
             MaximizeBox = false;
             MinimizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(440, 130);
+            ClientSize = new Size(480, 330);
+            Font = new Font("Segoe UI", 9f);
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
 
             var title = new Label();
             title.Text = BuildConfig.AppName;
             title.Font = new Font("Segoe UI", 14f, FontStyle.Bold);
-            title.SetBounds(16, 10, 400, 30);
+            title.SetBounds(16, 10, 440, 30);
 
-            status.Text = "Procurando a versão mais recente...";
-            status.Font = new Font("Segoe UI", 9f);
-            status.SetBounds(16, 44, 408, 20);
+            // Aviso do que será instalado e do que o programa transmite (exigido pela política de assinatura).
+            info.Text =
+                "Serão instalados no computador:\n" +
+                "  • o " + BuildConfig.AppName + " em C:\\Program Files\\" + BuildConfig.AppName + ";\n" +
+                "  • o serviço \"" + BuildConfig.AppName + "\", que inicia com o Windows e permite\n" +
+                "    acesso remoto somente com o ID e a senha deste computador;\n" +
+                "  • regras no Firewall e atalhos no Menu Iniciar e na Área de Trabalho.\n\n" +
+                "Privacidade: o " + BuildConfig.AppName + " envia o ID, a chave pública e o endereço IP\n" +
+                "apenas ao servidor de conexão do " + BuildConfig.AppName + ". As sessões são criptografadas.\n" +
+                "Para remover: Configurações > Aplicativos > " + BuildConfig.AppName + ".";
+            info.SetBounds(16, 46, 448, 170);
 
-            bar.SetBounds(16, 68, 408, 18);
+            autoUpdate.Text = "Atualizar automaticamente (verifica o GitHub uma vez por dia)";
+            autoUpdate.Checked = true;
+            autoUpdate.SetBounds(16, 220, 448, 22);
+
+            policy.Text = "Política de privacidade e de assinatura de código";
+            policy.SetBounds(16, 246, 448, 20);
+            policy.LinkClicked += delegate { try { Process.Start(PolicyUrl); } catch { } };
+
+            status.SetBounds(16, 50, 448, 20);
+            bar.SetBounds(16, 76, 448, 18);
             bar.Style = ProgressBarStyle.Marquee;
+            status.Visible = bar.Visible = false;
+
+            install.Text = "Instalar";
+            install.SetBounds(292, 290, 82, 28);
+            install.Click += delegate { StartInstall(); };
 
             cancel.Text = "Cancelar";
-            cancel.SetBounds(344, 96, 80, 26);
+            cancel.SetBounds(382, 290, 82, 28);
             cancel.Click += delegate { cancelled = true; if (client != null) client.CancelAsync(); Close(); };
 
-            Controls.AddRange(new Control[] { title, status, bar, cancel });
-            Shown += delegate { new Thread(Run) { IsBackground = true }.Start(); };
+            Controls.AddRange(new Control[] { title, info, autoUpdate, policy, status, bar, install, cancel });
+            AcceptButton = install;
+        }
+
+        void StartInstall()
+        {
+            withAutoUpdate = autoUpdate.Checked;
+            info.Visible = autoUpdate.Visible = policy.Visible = install.Visible = false;
+            status.Text = "Procurando a versão mais recente...";
+            status.Visible = bar.Visible = true;
+            ClientSize = new Size(480, 140);
+            cancel.SetBounds(382, 104, 82, 28);
+            new Thread(Run) { IsBackground = true }.Start();
         }
 
         void SetStatus(string text) { BeginInvoke((MethodInvoker)delegate { status.Text = text; }); }
@@ -403,7 +454,7 @@ namespace MiDesk
 
                 SetStatus("Instalando (aceite a permissão de administrador)...");
                 var psi = new ProcessStartInfo(Application.ExecutablePath,
-                    "--finish \"" + file + "\" \"" + r.Tag + "\"") { UseShellExecute = true, Verb = "runas" };
+                    "--finish \"" + file + "\" \"" + r.Tag + "\"" + (withAutoUpdate ? "" : " --no-autoupdate")) { UseShellExecute = true, Verb = "runas" };
                 Process p;
                 try { p = Process.Start(psi); }
                 catch (System.ComponentModel.Win32Exception)
