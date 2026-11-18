@@ -44,10 +44,19 @@ if SERVER:
     if not re.fullmatch(r"[A-Za-z0-9.\-:\[\]]+", SERVER):
         sys.exit("[brand] MIDESK_SERVER inválido (use só IP ou domínio, ex.: 203.0.113.10 ou remoto.exemplo.com)")
     config.append((r'(pub const RENDEZVOUS_SERVERS: &\[&str\] = &\[)"[^"]*"(\];)', rf'\g<1>"{SERVER}"\g<2>'))
+    # Servidor "de fábrica": o app deixa de se achar no servidor público da RustDesk
+    # (some a dica "configure seu próprio servidor" que leva à página de preços deles)
+    # e a API de conta deixa de cair em admin.rustdesk.com.
+    config.append((r'(pub static ref PROD_RENDEZVOUS_SERVER: RwLock<String> = RwLock::new\()""(\.to_owned\(\)\);)',
+                   rf'\g<1>"{SERVER}"\g<2>'))
 if KEY:
     if not re.fullmatch(r"[A-Za-z0-9+/=]{40,64}", KEY):
         sys.exit("[brand] MIDESK_KEY inválida (cole o conteúdo do id_ed25519.pub)")
     config.append((r'(pub const RS_PUB_KEY: &str = )"[^"]*"(;)', rf'\g<1>"{KEY}"\g<2>'))
+# Conta/login, catálogo de endereços e grupos dependem do RustDesk Server Pro (pago);
+# com o servidor gratuito eles não funcionam, então ficam ocultos.
+config.append((r'(pub fn is_disable_account\(\) -> bool \{\s*)is_some_hard_opton\("disable-account"\)',
+               r'\g<1>true'))
 patch("libs/hbb_common/src/config.rs", config)
 
 REPO_URL = os.environ.get("MIDESK_REPO_URL", "").strip() or "https://github.com/Systecinfo/MiDESK"
@@ -88,6 +97,13 @@ patch("flutter/lib/desktop/pages/desktop_setting_page.dart", [
     (r"'Copyright © \$\{DateTime\.now\(\)\.toString\(\)\.substring\(0, 4\)\} Purslane Tech Pte\. Ltd\.\\n\$license'",
      f"'Copyright © ${{DateTime.now().toString().substring(0, 4)}} {APP}\\\\n"
      f"Baseado no RustDesk, Copyright © Purslane Tech Pte. Ltd. (AGPL-3.0)\\\\n$license'"),
+])
+
+patch("flutter/lib/desktop/pages/connection_page.dart", [
+    (r'const url = "https://rustdesk\.com/pricing";', f'const url = "{REPO_URL}";'),
+])
+patch("flutter/lib/desktop/pages/install_page.dart", [
+    (r"'https://rustdesk\.com/privacy\.html'", f"'{REPO_URL}'"),
 ])
 
 print(f"[brand] app={APP} servidor={'próprio: ' + SERVER if SERVER else 'público (padrão)'} "
