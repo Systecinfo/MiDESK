@@ -1,4 +1,4 @@
-﻿# MiDESK
+# MiDESK
 
 Acesso remoto baseado no [RustDesk](https://github.com/rustdesk/rustdesk) (AGPL-3.0), com a marca MiDESK,
 servidor próprio embutido e um instalador online pequeno.
@@ -6,9 +6,9 @@ servidor próprio embutido e um instalador online pequeno.
 ## Como funciona
 
 ```
-MiDESK-Setup.exe (~15 KB)
+MiDESK-Setup.exe (~140 KB)
    └─ consulta  api.github.com/repos/Systecinfo/MiDESK/releases/latest
-   └─ baixa     midesk-<versão>-x86_64.exe   (~25 MB, da Release)
+   └─ baixa     MiDESK-<versão>-x86_64.exe   (~25 MB, da Release)
    └─ confere   SHA256SUMS.txt
    └─ instala   --silent-install  ->  C:\Program Files\MiDESK\MiDESK.exe
 ```
@@ -24,7 +24,8 @@ atualizar o MiDESK é só gerar uma nova Release.
 | `midesk/brand.py` | Troca o nome para MiDESK e embute o servidor/chave no código antes do build |
 | `installer/MiDeskSetup.cs` + `installer/build.ps1` | O instalador pequeno (C#, .NET Framework 4 que já vem no Windows) |
 | `.github/workflows/midesk-windows.yml` | Build do Windows x64 + instalador + Release |
-| `midesk/server/docker-compose.yml` | Servidor próprio (hbbs + hbbr) para a VPS |
+| `midesk/server/docker-compose.yml` / `setup.sh` | Servidor próprio (hbbs + hbbr) para a VPS |
+| `midesk/branding/midesk-icon.svg` | Logo do MiDESK (planeta + circuito + satélite). `make-icons.ps1` gera todos os ícones a partir dele |
 
 O resto é o código do RustDesk sem alterações, para facilitar puxar atualizações do upstream.
 
@@ -83,4 +84,4 @@ Com a chave configurada, o hbbs só aceita clientes que tenham essa chave — cl
 
 AGPL-3.0, igual ao RustDesk: o código-fonte (incluindo suas alterações) precisa continuar público para quem
 usa o programa — por isso este repositório é público. "RustDesk" e o logo são marcas do projeto original;
-troque os ícones em `res/` e `flutter/assets/` pelos do MiDESK.
+por isso o MiDESK usa nome e logo próprios, e mantém o crédito ao RustDesk na tela Sobre (aviso legal exigido pela AGPL).

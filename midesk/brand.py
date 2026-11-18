@@ -50,21 +50,44 @@ if KEY:
     config.append((r'(pub const RS_PUB_KEY: &str = )"[^"]*"(;)', rf'\g<1>"{KEY}"\g<2>'))
 patch("libs/hbb_common/src/config.rs", config)
 
-patch("Cargo.toml", [
-    (r'^(description = )"RustDesk Remote Desktop"', rf'\g<1>"{q(APP)} Remote Desktop"'),
-    (r'^(ProductName = )"RustDesk"', rf'\g<1>"{q(APP)}"'),
-    (r'^(FileDescription = )"RustDesk Remote Desktop"', rf'\g<1>"{q(APP)} Remote Desktop"'),
-])
+REPO_URL = os.environ.get("MIDESK_REPO_URL", "").strip() or "https://github.com/Systecinfo/MiDESK"
+COPYRIGHT = f"Copyright © 2026 {APP}. Baseado no RustDesk (AGPL-3.0)."
 
-patch("libs/portable/Cargo.toml", [
+cargo_meta = [
     (r'^(description = )"RustDesk Remote Desktop"', rf'\g<1>"{q(APP)} Remote Desktop"'),
     (r'^(ProductName = )"RustDesk"', rf'\g<1>"{q(APP)}"'),
     (r'^(FileDescription = )"RustDesk Remote Desktop"', rf'\g<1>"{q(APP)} Remote Desktop"'),
-])
+    (r'^(OriginalFilename = )"rustdesk\.exe"', rf'\g<1>"{q(APP)}.exe"'),
+    (r'^(LegalCopyright = )"[^"]*"', rf'\g<1>"{q(COPYRIGHT)}"'),
+]
+patch("Cargo.toml", cargo_meta)
+patch("libs/portable/Cargo.toml", cargo_meta)
 
 patch("flutter/windows/runner/Runner.rc", [
+    (r'(VALUE "CompanyName", )"[^"]*"', rf'\g<1>"{q(APP)}"'),
     (r'(VALUE "FileDescription", )"RustDesk Remote Desktop"', rf'\g<1>"{q(APP)} Remote Desktop"'),
+    (r'(VALUE "InternalName", )"rustdesk"', rf'\g<1>"{q(APP)}"'),
+    (r'(VALUE "LegalCopyright", )"[^"]*"', rf'\g<1>"{q(COPYRIGHT)}"'),
+    (r'(VALUE "OriginalFilename", )"rustdesk\.exe"', rf'\g<1>"{q(APP)}.exe"'),
     (r'(VALUE "ProductName", )"RustDesk"', rf'\g<1>"{q(APP)}"'),
+])
+
+# Textos fixos da interface (as traduções já trocam "RustDesk" pelo nome do app sozinhas).
+patch("flutter/lib/desktop/widgets/tabbar_widget.dart", [
+    (r'(child: const Text\(\s*)"RustDesk"', rf'\g<1>"{q(APP)}"'),
+])
+patch("flutter/lib/common.dart", [
+    # esconde o "Powered by RustDesk" da barra lateral (o crédito fica na tela Sobre)
+    (r'if \(bind\.mainGetBuildinOption\(key: "hide-powered-by-me"\) == \'Y\'\) \{',
+     "if (true) {"),
+])
+patch("flutter/lib/desktop/pages/desktop_setting_page.dart", [
+    (r"launchUrlString\('https://rustdesk\.com/privacy\.html'\)", f"launchUrlString('{REPO_URL}')"),
+    (r"launchUrlString\('https://rustdesk\.com'\)", f"launchUrlString('{REPO_URL}')"),
+    # aviso legal exigido pela AGPL: mantém o crédito ao RustDesk na tela Sobre
+    (r"'Copyright © \$\{DateTime\.now\(\)\.toString\(\)\.substring\(0, 4\)\} Purslane Tech Pte\. Ltd\.\\n\$license'",
+     f"'Copyright © ${{DateTime.now().toString().substring(0, 4)}} {APP}\\\\n"
+     f"Baseado no RustDesk, Copyright © Purslane Tech Pte. Ltd. (AGPL-3.0)\\\\n$license'"),
 ])
 
 print(f"[brand] app={APP} servidor={'próprio: ' + SERVER if SERVER else 'público (padrão)'} "

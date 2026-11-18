@@ -1,1 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" viewBox="66.993 897.484 26 26"><linearGradient id="a" x1=".148" x2=".845" y1=".851" y2=".154" gradientTransform="matrix(26.301 0 0 26.331 90.674 911.757)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0071ff"/><stop offset="1" stop-color="#00bfe1"/></linearGradient><defs><linearGradient xlink:href="#a" id="b" x1=".148" x2=".845" y1=".851" y2=".154" gradientTransform="matrix(26.00048 0 0 25.99935 66.993 897.485)" gradientUnits="userSpaceOnUse"/></defs><path fill="url(#b)" d="m89.318 903.552-2.135 2.122c-.376.337-.558.879-.347 1.337 1.422 2.976.882 6.524-1.452 8.856-2.335 2.331-5.887 2.87-8.866 1.449-.439-.197-.954-.03-1.292.312l-2.17 2.167a1.154 1.154 0 0 0 .208 1.81 13.005 13.005 0 0 0 15.91-1.912 12.97 12.97 0 0 0 1.956-15.887 1.154 1.154 0 0 0-1.812-.254zm-18.467-2.305a12.969 12.969 0 0 0-2.02 15.885 1.154 1.154 0 0 0 1.812.254l2.124-2.11c.385-.336.572-.884.359-1.348-1.423-2.976-.884-6.524 1.451-8.856 2.334-2.332 5.887-2.871 8.866-1.45.434.194.942.033 1.281-.3l2.182-2.18a1.152 1.152 0 0 0-.208-1.81 13.009 13.009 0 0 0-15.893 1.973z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- MiDESK: planeta (conexão global) + trilhas de circuito (tecnologia) + satélite em órbita (acesso remoto) -->
+  <defs>
+    <linearGradient id="bg" gradientUnits="userSpaceOnUse" x1="0" y1="256" x2="256" y2="0">
+      <stop offset="0" stop-color="#0047FF"/>
+      <stop offset="1" stop-color="#00C8E6"/>
+    </linearGradient>
+    <clipPath id="planet">
+      <circle cx="128" cy="128" r="62"/>
+    </clipPath>
+  </defs>
+
+  <!-- fundo -->
+  <rect width="256" height="256" rx="58" fill="url(#bg)"/>
+
+  <!-- órbita completa (a parte de trás fica escondida pelo planeta) -->
+  <ellipse cx="128" cy="128" rx="102" ry="32" transform="rotate(-24 128 128)" fill="none" stroke="#FFFFFF" stroke-width="9"/>
+
+  <!-- planeta -->
+  <circle cx="128" cy="128" r="62" fill="#FFFFFF"/>
+
+  <!-- trilhas de circuito -->
+  <g clip-path="url(#planet)" fill="none" stroke="url(#bg)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 58 110 H 100 L 116 94 H 146"/>
+    <path d="M 200 168 H 174 L 164 178 H 146"/>
+  </g>
+  <g fill="url(#bg)">
+    <circle cx="150" cy="94" r="9"/>
+    <circle cx="142" cy="178" r="8"/>
+  </g>
+
+  <!-- órbita: parte da frente passando sobre o planeta (com recorte) -->
+  <g clip-path="url(#planet)">
+    <g transform="rotate(-24 128 128)" fill="none">
+      <path d="M 230 128 A 102 32 0 0 1 26 128" stroke="url(#bg)" stroke-width="21"/>
+      <path d="M 230 128 A 102 32 0 0 1 26 128" stroke="#FFFFFF" stroke-width="9"/>
+    </g>
+  </g>
+
+  <!-- satélite / nó de conexão -->
+  <g transform="rotate(-24 128 128)">
+    <circle cx="211" cy="146.5" r="15" fill="url(#bg)"/>
+    <circle cx="211" cy="146.5" r="10" fill="#FFFFFF"/>
+  </g>
+</svg>

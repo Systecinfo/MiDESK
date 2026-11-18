@@ -63,6 +63,7 @@ jobs:
         shell: bash
         env:
           MIDESK_APP_NAME: ${{ env.APP_NAME }}
+          MIDESK_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
           MIDESK_SERVER: ${{ vars.MIDESK_SERVER }}
           MIDESK_KEY: ${{ vars.MIDESK_KEY }}
         run: python3 midesk/brand.py
@@ -142,6 +143,8 @@ jobs:
         run: |
           python3 .\build.py --portable --flutter --skip-portable-pack --hwcodec --vram
           mv ./flutter/build/windows/x64/runner/Release ./rustdesk
+          # O instalador do RustDesk cria serviço e atalhos apontando para "<APP_NAME>.exe"
+          Rename-Item ./rustdesk/rustdesk.exe "${{ env.APP_NAME }}.exe"
 
           # Driver de monitor virtual (mesmo pacote usado pelo RustDesk oficial)
           Invoke-WebRequest -Uri https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
@@ -169,10 +172,10 @@ jobs:
           sed -i '/dpiAware/d' res/manifest.xml
           pushd ./libs/portable
           pip3 install -r requirements.txt
-          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/rustdesk.exe
+          python3 ./generate.py -f ../../rustdesk/ -o . -e "../../rustdesk/${APP_NAME}.exe"
           popd
           mkdir -p ./dist
-          mv ./target/release/rustdesk-portable-packer.exe "./dist/midesk-${VERSION}-x86_64.exe"
+          mv ./target/release/rustdesk-portable-packer.exe "./dist/${APP_NAME}-${VERSION}-x86_64.exe"
 
       - name: Build MiDESK-Setup.exe (instalador pequeno)
         run: |
@@ -199,7 +202,7 @@ jobs:
           name: MiDESK ${{ steps.ver.outputs.tag }}
           prerelease: false
           body: |
-            Baixe só o **MiDESK-Setup.exe** (~15 KB): ele busca a versão mais recente desta página, confere o SHA256 e instala.
+            Baixe só o **MiDESK-Setup.exe** (~110 KB): ele busca a versão mais recente desta página, confere o SHA256 e instala.
           files: |
             ./dist/*.exe
             ./dist/SHA256SUMS.txt

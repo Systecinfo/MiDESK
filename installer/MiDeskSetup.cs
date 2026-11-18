@@ -138,8 +138,21 @@ namespace MiDesk
                 }
                 p.WaitForExit();
 
-                string installed = FindInstalledExe();
-                Process.Start(installed ?? file);
+                SetStatus("Finalizando a instalação...");
+                string installed = null;
+                for (int i = 0; i < 60 && installed == null && !cancelled; i++)
+                {
+                    installed = FindInstalledExe();
+                    if (installed == null) Thread.Sleep(1000);
+                }
+                if (cancelled) return;
+                if (installed == null)
+                {
+                    Fail("A instalação não foi concluída. O " + BuildConfig.AppName + " será aberto sem instalar.");
+                    Process.Start(file);
+                    return;
+                }
+                Process.Start(installed);
                 Finish();
             }
             catch (Exception ex)
@@ -195,16 +208,9 @@ namespace MiDesk
 
         static string FindInstalledExe()
         {
-            string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), BuildConfig.AppName);
-            if (!Directory.Exists(dir)) return null;
-            string named = Path.Combine(dir, BuildConfig.AppName + ".exe");
-            if (File.Exists(named)) return named;
-            foreach (string f in Directory.GetFiles(dir, "*.exe"))
-            {
-                string n = Path.GetFileName(f).ToLowerInvariant();
-                if (!n.Contains("uninstall") && !n.Contains("unins")) return f;
-            }
-            return null;
+            // O instalador grava o executável como "<AppName>.exe" na pasta do app.
+            string named = Path.Combine(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), BuildConfig.AppName), BuildConfig.AppName + ".exe");
+            return File.Exists(named) ? named : null;
         }
     }
 }
