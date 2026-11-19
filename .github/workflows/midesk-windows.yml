@@ -178,7 +178,30 @@ jobs:
           mkdir -p ./dist
           mv ./target/release/rustdesk-portable-packer.exe "./dist/${APP_NAME}-${VERSION}-x86_64.exe"
 
+      # O MiDESK-Setup.exe só é recompilado quando o código do instalador muda. Assim o arquivo
+      # (e o hash) fica igual entre as releases e acumula reputação no SmartScreen e nos antivírus.
+      # Cada versão fica guardada na pré-release "setup-cache" como MiDESK-Setup-<chave>.exe.
+      - name: Reuse MiDESK-Setup.exe if the installer did not change
+        id: setup
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SIGNED: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' && '1' || '0' }}
+        run: |
+          KEY=$( { tr -d '\r' < installer/MiDeskSetup.cs; tr -d '\r' < installer/build.ps1; sha256sum < res/icon.ico; echo "${GITHUB_REPOSITORY}|${APP_NAME}|signed=${SIGNED}"; } | sha256sum | cut -c1-16)
+          ASSET="${APP_NAME}-Setup-${KEY}.exe"
+          echo "asset=${ASSET}" >> "$GITHUB_OUTPUT"
+          if gh release download setup-cache -R "$GITHUB_REPOSITORY" -p "$ASSET" -D setup-cache; then
+            cp "setup-cache/${ASSET}" "dist/${APP_NAME}-Setup.exe"
+            echo "reused=true" >> "$GITHUB_OUTPUT"
+            echo "Reaproveitando ${ASSET}"
+          else
+            echo "reused=false" >> "$GITHUB_OUTPUT"
+            echo "O instalador mudou: compilando ${ASSET}"
+          fi
+
       - name: Build MiDESK-Setup.exe (instalador pequeno)
+        if: steps.setup.outputs.reused != 'true'
         run: |
           .\installer\build.ps1 -Repo "${{ github.repository }}" -AppName "${{ env.APP_NAME }}" -Icon res\icon.ico
           Copy-Item .\installer\dist\MiDESK-Setup.exe .\dist\
@@ -188,14 +211,14 @@ jobs:
       # SIGNPATH_API_TOKEN). Cada assinatura precisa ser aprovada manualmente no site do SignPath.
       - name: Upload unsigned MiDESK-Setup.exe (SignPath)
         id: upload-unsigned-setup
-        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' && steps.setup.outputs.reused != 'true' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: midesk-setup-unsigned
           path: ./dist/MiDESK-Setup.exe
 
       - name: Sign MiDESK-Setup.exe (SignPath)
-        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' && steps.setup.outputs.reused != 'true' }}
         uses: signpath/github-action-submit-signing-request@v3
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
@@ -208,12 +231,26 @@ jobs:
           output-artifact-directory: ./signed
 
       - name: Use signed MiDESK-Setup.exe
-        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' && steps.setup.outputs.reused != 'true' }}
         run: |
           Copy-Item .\signed\MiDESK-Setup.exe .\dist\MiDESK-Setup.exe -Force
           $sig = Get-AuthenticodeSignature .\dist\MiDESK-Setup.exe
           if ($sig.Status -ne 'Valid') { throw "Assinatura inválida: $($sig.Status)" }
           $sig.SignerCertificate.Subject
+
+      - name: Save MiDESK-Setup.exe in setup-cache
+        if: steps.setup.outputs.reused != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view setup-cache -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create setup-cache -R "$GITHUB_REPOSITORY" --prerelease --target "$GITHUB_SHA" \
+              --title "Cache do MiDESK-Setup (uso interno)" \
+              --notes "Uso interno do build: guarda cada versão do MiDESK-Setup.exe para ele continuar igual entre as releases. Para instalar, use a release mais recente."
+          fi
+          cp "dist/${APP_NAME}-Setup.exe" "${{ steps.setup.outputs.asset }}"
+          gh release upload setup-cache "${{ steps.setup.outputs.asset }}" -R "$GITHUB_REPOSITORY" --clobber
 
       - name: Checksums
         shell: bash
